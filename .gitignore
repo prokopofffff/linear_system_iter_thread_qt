@@ -52,3 +52,10 @@ compile_commands.json
 *creator.user*
 
 *_qmlcache.qrc
+
+test_results/
+*.out
+*.zip
+debug/
+release/
+basic_graph.app
