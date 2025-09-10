@@ -7,6 +7,8 @@
 #include "approximation.h"
 #include "solver.h"
 #include "functions.h"
+#include <chrono>
+#include <cstdio>
 
 void printUsage(const char* programName) {
     std::cerr << "Usage: " << programName << " a b c d nx ny mx my k eps mi p" << std::endl;
@@ -66,6 +68,9 @@ int main(int argc, char* argv[]) {
     context.m_i = mi;
     context.p = p;
 
+    // --- Time measurement for t1 starts ---
+    auto t1_start = std::chrono::high_resolution_clock::now();
+
     // Build the sparse matrix and solve the system
     SparseMatrix matrix;
     buildMatrixStructure(matrix, context);
@@ -75,7 +80,33 @@ int main(int argc, char* argv[]) {
     calculateRightHandSide(b_vector, context);
 
     double* solution = new double[(nx + 1) * (ny + 1)];
-    solveSystem(matrix, b_vector, solution, context);
+    int it = solveSystem(matrix, b_vector, solution, context); // Store iterations
+
+    // --- Time measurement for t1 ends ---
+    auto t1_end = std::chrono::high_resolution_clock::now();
+    double t1 = std::chrono::duration<double>(t1_end - t1_start).count();
+
+    // --- Time measurement for t2 starts ---
+    auto t2_start = std::chrono::high_resolution_clock::now();
+
+    // Calculate errors
+    double r1 = calculateC1Error(solution, context);
+    double r2 = calculateL1Error(solution, context);
+    double r3 = calculateC2Error(solution, context);
+    double r4 = calculateL2Error(solution, context);
+
+    // --- Time measurement for t2 ends ---
+    auto t2_end = std::chrono::high_resolution_clock::now();
+    double t2 = std::chrono::duration<double>(t2_end - t2_start).count();
+
+    // Placeholder for task variable, assuming 0
+    int task = 0;
+
+    // Output results
+    printf (
+        "%s : Task = %d R1 = %e R2 = %e R3 = %e R4 = %e T1 = %.2f T2 = %.2f It = %d E = %e K = %d Nx = %d Ny = %d P = %d\n",
+        argv[0], task, r1, r2, r3, r4, t1, t2, it, eps, k, nx, ny, p
+    );
 
     // Generate visualization data for function, approximation, and error
     std::vector<double> functionData((mx + 1) * (my + 1));

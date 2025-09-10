@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <algorithm>
 #include <QString>
+#include <cmath>
 #include "matrix.h"
 #include "approximation.h"
 #include "solver.h"

@@ -2,6 +2,7 @@
 #include <QPainter>
 #include <QPolygonF>
 #include <algorithm>
+#include <cmath>
 
 namespace Graphics {
 QColor palette(double value, double min, double max) {
