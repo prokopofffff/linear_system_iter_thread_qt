@@ -110,6 +110,14 @@ void VisualizationWindow::keyPressEvent(QKeyEvent* event) {
 }
 
 void VisualizationWindow::recomputeData() {
+    // Timing variables
+    double t1 = 0.0, t2 = 0.0;
+    int it = 0;
+    double r1 = 0.0, r2 = 0.0, r3 = 0.0, r4 = 0.0;
+
+    // Start timing for coefficient calculation
+    auto start_t1 = std::chrono::high_resolution_clock::now();
+
     // Set up context
     double h_x = (b_ - a_) / nx_;
     double h_y = (d_ - c_) / ny_;
@@ -126,10 +134,20 @@ void VisualizationWindow::recomputeData() {
     context_.m_i = mi_;
     context_.p = p_;
 
+    // Ensure thread manager is initialized with current thread count
+    if (!g_thread_manager.initialized || g_thread_manager.num_threads != p_) {
+        g_thread_manager.initialize(p_);
+    }
+
     // Build and solve system
     SparseMatrix matrix;
     buildMatrixStructure(matrix, context_);
     calculateGramMatrix(matrix, context_);
+
+    // End timing for coefficient calculation
+    auto end_t1 = std::chrono::high_resolution_clock::now();
+    t1 = std::chrono::duration<double>(end_t1 - start_t1).count();
+
     std::vector<double> b_vector((nx_ + 1) * (ny_ + 1));
     calculateRightHandSide(b_vector.data(), context_);
 
@@ -149,8 +167,22 @@ void VisualizationWindow::recomputeData() {
     }
     b_vector[centerIdx] += perturbation_ * 0.1 * fmax;
 
+    solution_.clear();
     solution_.resize((nx_ + 1) * (ny_ + 1));
-    solveSystem(matrix, b_vector.data(), solution_.data(), context_);
+    it = solveSystem(matrix, b_vector.data(), solution_.data(), context_);
+
+    // Start timing for error calculation
+    auto start_t2 = std::chrono::high_resolution_clock::now();
+
+    // Calculate error metrics
+    r1 = calculateC1Error(solution_.data(), context_);
+    r2 = calculateL1Error(solution_.data(), context_);
+    r3 = calculateC2Error(solution_.data(), context_);
+    r4 = calculateL2Error(solution_.data(), context_);
+
+    // End timing for error calculation
+    auto end_t2 = std::chrono::high_resolution_clock::now();
+    t2 = std::chrono::duration<double>(end_t2 - start_t2).count();
 
     // Generate visualization data for function, approximation, and error
     functionData_.resize((mx_ + 1) * (my_ + 1));
@@ -177,6 +209,12 @@ void VisualizationWindow::recomputeData() {
         }
     }
     freeMatrix(matrix);
+
+    // Print results in the required format when function changes (similar to main)
+    if (scaleLevel_ == 0 && perturbation_ == 0) {  // Only print for base case, similar to main
+        printf("VisualizationWindow : Task = %d R1 = %e R2 = %e R3 = %e R4 = %e T1 = %.2f T2 = %.2f It = %d E = %e K = %d Nx = %d Ny = %d P = %d\n",
+               0, r1, r2, r3, r4, t1, t2, it, eps_, k_, nx_, ny_, p_);
+    }
 }
 
 void VisualizationWindow::updateVisualization() {
@@ -219,7 +257,7 @@ void VisualizationWindow::drawPaletteLegend(QPainter& painter) {
 void VisualizationWindow::displayState(QPainter& painter) {
     painter.setPen(Qt::red);
     int y = 20;
-    painter.drawText(10, y, QString("Function k=%1").arg(k_)); y += 20;
+    painter.drawText(10, y, QString("Function k=%1: %2").arg(k_).arg(getFunctionDefinition(k_))); y += 20;
     painter.drawText(10, y, QString("Mode: %1").arg(currentMode_ == 0 ? "Function" : currentMode_ == 1 ? "Approximation" : "Error")); y += 20;
     painter.drawText(10, y, QString("Scale level: %1").arg(scaleLevel_)); y += 20;
     painter.drawText(10, y, QString("nx=%1 ny=%2").arg(nx_).arg(ny_)); y += 20;

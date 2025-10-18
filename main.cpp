@@ -68,6 +68,9 @@ int main(int argc, char* argv[]) {
     context.m_i = mi;
     context.p = p;
 
+    // Initialize global thread manager
+    g_thread_manager.initialize(p);
+
     // --- Time measurement for t1 starts ---
     auto t1_start = std::chrono::high_resolution_clock::now();
 
@@ -143,6 +146,9 @@ int main(int argc, char* argv[]) {
     delete[] b_vector;
     delete[] solution;
     freeMatrix(matrix);
+
+    // Cleanup global thread manager before exit
+    g_thread_manager.cleanup();
 
     return app.exec();
 }

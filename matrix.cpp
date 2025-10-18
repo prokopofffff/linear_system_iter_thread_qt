@@ -6,13 +6,6 @@
 #include <vector>
 #include <pthread.h>
 
-// Thread argument structure for parallel computation
-struct ThreadArg {
-    SparseMatrix* matrix;
-    ApproximationContext context;
-    int thread_id;
-    double* b;  // For right-hand side calculation
-};
 
 // Build the structure of the sparse matrix (MSR format)
 void buildMatrixStructure(SparseMatrix& matrix, const ApproximationContext& context) {
@@ -314,26 +307,14 @@ void* calculateGramMatrixThread(void* arg) {
 
 // Calculate the Gram matrix in parallel
 void calculateGramMatrix(SparseMatrix& matrix, const ApproximationContext& context) {
-    int p = context.p;
-    pthread_t* threads = new pthread_t[p];
-    ThreadArg* thread_args = new ThreadArg[p];
+    // Setup thread arguments using global thread manager
+    g_thread_manager.setupMatrixThreads(&matrix, context);
 
-    for (int i = 0; i < p; i++) {
-        thread_args[i].matrix = &matrix;
-        thread_args[i].context = context;
-        thread_args[i].thread_id = i;
-
-        pthread_create(&threads[i], nullptr, calculateGramMatrixThread, &thread_args[i]);
-    }
+    // Execute threads for Gram matrix calculation
+    g_thread_manager.executeMatrixThreads(calculateGramMatrixThread);
 
     // Wait for all threads to complete
-    for (int i = 0; i < p; i++) {
-        pthread_join(threads[i], nullptr);
-    }
-
-    // Clean up
-    delete[] threads;
-    delete[] thread_args;
+    g_thread_manager.waitForCompletion();
 }
 
 // Thread function for calculating part of the right-hand side
@@ -418,31 +399,18 @@ void calculateRightHandSide(double* b, const ApproximationContext& context) {
     int n_x = context.n_x;
     int n_y = context.n_y;
     int n = (n_x + 1) * (n_y + 1);
-    int p = context.p;
 
     // Initialize right-hand side to zero
     std::memset(b, 0, n * sizeof(double));
 
-    // Create threads
-    pthread_t* threads = new pthread_t[p];
-    ThreadArg* thread_args = new ThreadArg[p];
+    // Setup thread arguments using global thread manager
+    g_thread_manager.setupMatrixThreads(nullptr, context, b);
 
-    for (int i = 0; i < p; i++) {
-        thread_args[i].b = b;
-        thread_args[i].context = context;
-        thread_args[i].thread_id = i;
-
-        pthread_create(&threads[i], nullptr, calculateRHSThread, &thread_args[i]);
-    }
+    // Execute threads for right-hand side calculation
+    g_thread_manager.executeMatrixThreads(calculateRHSThread);
 
     // Wait for all threads to complete
-    for (int i = 0; i < p; i++) {
-        pthread_join(threads[i], nullptr);
-    }
-
-    // Clean up
-    delete[] threads;
-    delete[] thread_args;
+    g_thread_manager.waitForCompletion();
 }
 
 // Free memory allocated for the sparse matrix

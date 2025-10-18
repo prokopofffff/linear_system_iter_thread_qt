@@ -8,7 +8,8 @@ namespace Graphics {
 QColor palette(double value, double min, double max) {
     // Simple grayscale mapping
     double alpha = (max > min) ? (value - min) / (max - min) : 0.5;
-    alpha = std::clamp(alpha, 0.0, 1.0);
+    if (alpha < 0.0) alpha = 0.0;
+    else if (alpha > 1.0) alpha = 1.0;
     int v = static_cast<int>(alpha * 255);
     return QColor(v, v, v);
 }

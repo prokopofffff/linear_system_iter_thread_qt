@@ -6,13 +6,6 @@
 #include <pthread.h>
 #include <algorithm>
 
-// Structure for parallel error calculation
-struct ErrorArg {
-    const double* solution;
-    ApproximationContext context;
-    int thread_id;
-    double result;  // Local result for the thread
-};
 
 // Solve the system Ax = b using the minimum error method with Jacobi preconditioner
 int solveSystem(const SparseMatrix& A, const double* b, double* x, const ApproximationContext& context) {
@@ -169,35 +162,20 @@ void* calculateC1ErrorThread(void* arg) {
 
 // Calculate C1 error rate (max |f(P_l)-P_f(P_l)|) at triangle centroids
 double calculateC1Error(const double* solution, const ApproximationContext& context) {
-    int p = context.p;
+    // Setup thread arguments using global thread manager
+    g_thread_manager.setupErrorThreads(solution, context);
 
-    // Create threads
-    pthread_t* threads = new pthread_t[p];
-    ErrorArg* thread_args = new ErrorArg[p];
-
-    for (int i = 0; i < p; i++) {
-        thread_args[i].solution = solution;
-        thread_args[i].context = context;
-        thread_args[i].thread_id = i;
-        thread_args[i].result = 0.0;
-
-        pthread_create(&threads[i], nullptr, calculateC1ErrorThread, &thread_args[i]);
-    }
+    // Execute threads for C1 error calculation
+    g_thread_manager.executeErrorThreads(calculateC1ErrorThread);
 
     // Wait for all threads to complete
-    for (int i = 0; i < p; i++) {
-        pthread_join(threads[i], nullptr);
-    }
+    g_thread_manager.waitForCompletion();
 
     // Find global maximum
     double max_error = 0.0;
-    for (int i = 0; i < p; i++) {
-        max_error = std::max(max_error, thread_args[i].result);
+    for (int i = 0; i < context.p; i++) {
+        max_error = std::max(max_error, g_thread_manager.error_thread_args[i].result);
     }
-
-    // Clean up
-    delete[] threads;
-    delete[] thread_args;
 
     return max_error;
 }
@@ -255,35 +233,20 @@ void* calculateL1ErrorThread(void* arg) {
 
 // Calculate L1 error rate (sum |f(P_l)-P_f(P_l)|*area/2) at triangle centroids
 double calculateL1Error(const double* solution, const ApproximationContext& context) {
-    int p = context.p;
+    // Setup thread arguments using global thread manager
+    g_thread_manager.setupErrorThreads(solution, context);
 
-    // Create threads
-    pthread_t* threads = new pthread_t[p];
-    ErrorArg* thread_args = new ErrorArg[p];
-
-    for (int i = 0; i < p; i++) {
-        thread_args[i].solution = solution;
-        thread_args[i].context = context;
-        thread_args[i].thread_id = i;
-        thread_args[i].result = 0.0;
-
-        pthread_create(&threads[i], nullptr, calculateL1ErrorThread, &thread_args[i]);
-    }
+    // Execute threads for L1 error calculation
+    g_thread_manager.executeErrorThreads(calculateL1ErrorThread);
 
     // Wait for all threads to complete
-    for (int i = 0; i < p; i++) {
-        pthread_join(threads[i], nullptr);
-    }
+    g_thread_manager.waitForCompletion();
 
     // Sum errors from all threads
     double total_error = 0.0;
-    for (int i = 0; i < p; i++) {
-        total_error += thread_args[i].result;
+    for (int i = 0; i < context.p; i++) {
+        total_error += g_thread_manager.error_thread_args[i].result;
     }
-
-    // Clean up
-    delete[] threads;
-    delete[] thread_args;
 
     return total_error;
 }
@@ -334,35 +297,21 @@ void* calculateC2ErrorThread(void* arg) {
 
 // Calculate C2 error rate (max |f(x_i,y_j)-P_f(x_i,y_j)|) at grid points
 double calculateC2Error(const double* solution, const ApproximationContext& context) {
-    int p = context.p;
 
-    // Create threads
-    pthread_t* threads = new pthread_t[p];
-    ErrorArg* thread_args = new ErrorArg[p];
+    // Setup thread arguments using global thread manager
+    g_thread_manager.setupErrorThreads(solution, context);
 
-    for (int i = 0; i < p; i++) {
-        thread_args[i].solution = solution;
-        thread_args[i].context = context;
-        thread_args[i].thread_id = i;
-        thread_args[i].result = 0.0;
-
-        pthread_create(&threads[i], nullptr, calculateC2ErrorThread, &thread_args[i]);
-    }
+    // Execute threads for C2 error calculation
+    g_thread_manager.executeErrorThreads(calculateC2ErrorThread);
 
     // Wait for all threads to complete
-    for (int i = 0; i < p; i++) {
-        pthread_join(threads[i], nullptr);
-    }
+    g_thread_manager.waitForCompletion();
 
     // Find global maximum
     double max_error = 0.0;
-    for (int i = 0; i < p; i++) {
-        max_error = std::max(max_error, thread_args[i].result);
+    for (int i = 0; i < context.p; i++) {
+        max_error = std::max(max_error, g_thread_manager.error_thread_args[i].result);
     }
-
-    // Clean up
-    delete[] threads;
-    delete[] thread_args;
 
     return max_error;
 }
@@ -415,35 +364,20 @@ void* calculateL2ErrorThread(void* arg) {
 
 // Calculate L2 error rate (sum |f(x_i,y_j)-P_f(x_i,y_j)|*h_x*h_y) at grid points
 double calculateL2Error(const double* solution, const ApproximationContext& context) {
-    int p = context.p;
+    // Setup thread arguments using global thread manager
+    g_thread_manager.setupErrorThreads(solution, context);
 
-    // Create threads
-    pthread_t* threads = new pthread_t[p];
-    ErrorArg* thread_args = new ErrorArg[p];
-
-    for (int i = 0; i < p; i++) {
-        thread_args[i].solution = solution;
-        thread_args[i].context = context;
-        thread_args[i].thread_id = i;
-        thread_args[i].result = 0.0;
-
-        pthread_create(&threads[i], nullptr, calculateL2ErrorThread, &thread_args[i]);
-    }
+    // Execute threads for L2 error calculation
+    g_thread_manager.executeErrorThreads(calculateL2ErrorThread);
 
     // Wait for all threads to complete
-    for (int i = 0; i < p; i++) {
-        pthread_join(threads[i], nullptr);
-    }
+    g_thread_manager.waitForCompletion();
 
     // Sum errors from all threads
     double total_error = 0.0;
-    for (int i = 0; i < p; i++) {
-        total_error += thread_args[i].result;
+    for (int i = 0; i < context.p; i++) {
+        total_error += g_thread_manager.error_thread_args[i].result;
     }
-
-    // Clean up
-    delete[] threads;
-    delete[] thread_args;
 
     return total_error;
 }

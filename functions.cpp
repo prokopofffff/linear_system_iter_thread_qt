@@ -2,6 +2,7 @@
 #include <cmath>
 #include <iostream>
 #include <algorithm>
+#include <QString>
 
 // Evaluate the function with the given k at point (x,y)
 double evaluateFunction(int k, double x, double y) {
@@ -183,4 +184,28 @@ double evaluateApproximation(const double* solution, double x, double y, const A
     delete[] triangles;
 
     return result;
+}
+
+// Get the definition string of the function with the given k
+QString getFunctionDefinition(int k) {
+    switch (k) {
+        case 0:
+            return "f(x,y) = 1";
+        case 1:
+            return "f(x,y) = x";
+        case 2:
+            return "f(x,y) = y";
+        case 3:
+            return "f(x,y) = x + y";
+        case 4:
+            return "f(x,y) = sqrt(x² + y²)";
+        case 5:
+            return "f(x,y) = x² + y²";
+        case 6:
+            return "f(x,y) = e^(x² - y²)";
+        case 7:
+            return "f(x,y) = 1/(25(x² + y²) + 1)";
+        default:
+            return "Invalid function";
+    }
 }

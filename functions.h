@@ -2,6 +2,7 @@
 #define FUNCTIONS_H
 
 #include "common.h"
+#include <QString>
 
 // Evaluate the function with the given k at point (x,y)
 double evaluateFunction(int k, double x, double y);
@@ -11,5 +12,8 @@ double evaluateApproximation(const double* solution, double x, double y, const A
 
 // Get all triangles in the grid for the approximation
 void generateTriangles(Triangle* triangles, const ApproximationContext& context);
+
+// Get the definition string of the function with the given k
+QString getFunctionDefinition(int k);
 
 #endif // FUNCTIONS_H
